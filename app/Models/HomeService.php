@@ -6,6 +6,7 @@ use Illuminate\Support\Str;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Support\Facades\Storage;
 
 class HomeService extends Model
 {
@@ -37,5 +38,27 @@ class HomeService extends Model
 
     public function category() {
         return $this->belongsTo(Category::class, 'category_id');
+    }
+
+    protected static function boot()
+    {
+        parent::boot();
+
+        static::deleting(function ($homeService) {
+            if ($homeService->thumbnail) {
+                Storage::delete($homeService->thumbnail);
+            }
+            foreach ($homeService->testimonials as $testimonial) {
+                if ($testimonial->photo) {
+                    Storage::delete($testimonial->photo);
+                }
+            }
+        });
+
+        static::updating(function ($homeService) {
+            if ($homeService->isDirty('thumbnail')) {
+                Storage::delete($homeService->getOriginal('thumbnail'));
+            }
+        });
     }
 }

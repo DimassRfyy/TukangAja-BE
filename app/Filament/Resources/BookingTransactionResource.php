@@ -31,12 +31,18 @@ use Filament\Forms\Components\ToggleButtons;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
 use App\Filament\Resources\BookingTransactionResource\Pages;
 use App\Filament\Resources\BookingTransactionResource\RelationManagers;
+use Filament\Tables\Actions\ActionGroup;
 
 class BookingTransactionResource extends Resource
 {
     protected static ?string $model = BookingTransaction::class;
 
-    protected static ?string $navigationIcon = 'heroicon-o-rectangle-stack';
+    protected static ?string $navigationIcon = 'heroicon-o-shopping-cart';
+
+    public static function getNavigationBadge(): ?string
+    {
+        return (string) BookingTransaction::where('is_paid', false)->count();
+    }
 
     protected static ?string $navigationGroup = 'Transaction';
 
@@ -218,24 +224,31 @@ class BookingTransactionResource extends Resource
                 Tables\Filters\TrashedFilter::make(),
             ])
             ->actions([
-                Tables\Actions\ViewAction::make(),
-                Tables\Actions\EditAction::make(),
-
-                Action::make('approve')
-                ->label('Approve')
-                ->action(function(BookingTransaction $record){
-                    $record->is_paid = true;
-                    $record->save();
-
-                    Notification::make()
-                    ->title('Order Approved')
-                    ->success()
-                    ->body('The order has been successfully approved.')
-                    ->send();
-                })
-                ->color('success')
-                ->requiresConfirmation()
-                ->visible(fn(BookingTransaction $record) => !$record->is_paid),
+                ActionGroup::make([
+                    ActionGroup::make([
+                        Tables\Actions\ViewAction::make(),
+                        Tables\Actions\EditAction::make(),
+                    ])
+                        ->dropdown(false),
+                        Tables\Actions\Action::make('approve')
+                        ->label('Approve')
+                        ->action( function (BookingTransaction $record) {
+                            $record->is_paid = true;
+                            $record->save();
+        
+                            Notification::make()
+                            ->title('Transaction Approve')
+                            ->success()
+                            ->body('Transaction has been approved')
+                            ->send();
+                        })
+                        ->color('success')
+                        ->requiresConfirmation()
+                        ->visible(fn (BookingTransaction $record) => !$record->is_paid),
+                        Tables\Actions\DeleteAction::make()
+                        ->visible(fn (BookingTransaction $record) => $record->is_paid),
+                ])
+                    ->icon('heroicon-m-bars-3')
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
